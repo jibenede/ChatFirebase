@@ -22,7 +22,6 @@ public class FileMessage extends Message implements Parcelable {
     private int mSize;
     private String mUrl;
     private String mFileName;
-    private boolean mDownloadable;
     private Uri mUri;
 
     public FileMessage() {
@@ -41,7 +40,6 @@ public class FileMessage extends Message implements Parcelable {
         mSize = in.readInt();
         mUrl = in.readString();
         mFileName = in.readString();
-        mDownloadable = in.readInt() == 1;
     }
 
     public FileMessage(String username, String room, @MessageType int type) {
@@ -88,15 +86,6 @@ public class FileMessage extends Message implements Parcelable {
         mUri = uri;
     }
 
-    @JsonIgnore
-    public boolean isDownloadable() {
-        return mDownloadable;
-    }
-
-    public void setDownloadable(boolean downloadable) {
-        mDownloadable = downloadable;
-    }
-
     // Parcelable interface
 
     public static final Parcelable.Creator<FileMessage> CREATOR
@@ -116,6 +105,5 @@ public class FileMessage extends Message implements Parcelable {
         dest.writeInt(mSize);
         dest.writeString(mUrl);
         dest.writeString(mFileName);
-        dest.writeInt(mDownloadable ? 1 : 0);
     }
 }

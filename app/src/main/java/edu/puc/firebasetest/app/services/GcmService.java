@@ -32,8 +32,6 @@ public class GcmService extends GcmListenerService {
             String room = data.getString(Message.KEY_ROOM);
             int type = Integer.parseInt(data.getString(Message.KEY_TYPE));
 
-
-
             if (type == Message.MESSAGE_TYPE_TEXT) {
                 Message message = new Message(username, messageContent, room, type, uuid);
 
@@ -50,10 +48,6 @@ public class GcmService extends GcmListenerService {
                 fileMessage.setUrl(url);
                 fileMessage.setSize(size);
                 fileMessage.setFileName(fileName);
-
-                if (!fileMessage.getUsername().equals(FirebaseModel.getUser(this))) {
-                    fileMessage.setDownloadable(true);
-                }
 
                 Intent intent = ChatService.getIntent(this, ChatService.ACTION_GCM_FILE_MESSAGE_RECEIVED);
                 intent.putExtra(FileMessage.PARCELABLE_KEY, fileMessage);

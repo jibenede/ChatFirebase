@@ -1,6 +1,8 @@
 package edu.puc.firebasetest.app.adapters;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -42,15 +44,17 @@ public class ChatAdapter extends ArrayAdapter<Message> implements FileDownloader
     private Context mContext;
     private ContactsCache mContacts;
     private MediaPlayer mMediaPlayer;
+    private SharedPreferences mFilesPreferences;
 
     private Map<Integer, PhotoAudioDownloader> mDownloaders;
 
-    public ChatAdapter(Context context, List<Message> objects, ContactsCache cache) {
+    public ChatAdapter(Context context, List<Message> objects, SharedPreferences filesPreferences) {
         super(context, R.layout.listview_item_message, objects);
         mLayoutInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mContext = context;
-        mContacts = cache;
+        mContacts = ContactsCache.getInstance(context);
         mDownloaders = new HashMap<>();
+        mFilesPreferences = filesPreferences;
     }
 
     @Override
@@ -116,18 +120,12 @@ public class ChatAdapter extends ArrayAdapter<Message> implements FileDownloader
         } else {
             messageContent = mContext.getString(R.string.chat_received_file,
                     mContacts.get(message.getUsername()).getName(), fileMessage.getFileName(), fileMessage.getSize() / 1024);
-
-            // We do not give the option to download if the file already exists
-            // TODO: This will deny downloads if there is a another file with the same name. Should fix.
-            File file = new File(mContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileMessage.getFileName());
-            if (file.exists()) {
-                fileMessage.setDownloadable(false);
-            }
         }
 
-        // Buttons for download will be disabled if file is not downloadable
-        LinearLayout layout = (LinearLayout) view.findViewById(R.id.layout_buttons);
-        if (!fileMessage.isDownloadable()) {
+        // Buttons for download will be disabled if file has already been accepted or refused; or if the sender is
+        // the current user
+        final LinearLayout layout = (LinearLayout) view.findViewById(R.id.layout_buttons);
+        if (fileMessage.getUsername().equals(FirebaseModel.getUser(mContext)) || mFilesPreferences.contains(fileMessage.getUuid())) {
             layout.setVisibility(View.GONE);
         }
 
@@ -135,17 +133,18 @@ public class ChatAdapter extends ArrayAdapter<Message> implements FileDownloader
         // TODO: when refusing download, state is not saved and will be asked again when reentering room
         final Button btnOk = (Button) view.findViewById(R.id.btn_ok);
         final Button btnNo = (Button) view.findViewById(R.id.btn_no);
-        btnOk.setEnabled(fileMessage.isDownloadable());
-        btnNo.setEnabled(fileMessage.isDownloadable());
         btnOk.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (mListener != null) {
                     mListener.onFileAccepted((FileMessage) message);
                 }
-                btnOk.setEnabled(false);
-                btnNo.setEnabled(false);
-                fileMessage.setDownloadable(false);
+
+                Editor editor = mFilesPreferences.edit();
+                editor.putBoolean(fileMessage.getUuid(), true);
+                editor.apply();
+
+                layout.setVisibility(View.GONE);
             }
         });
         btnNo.setOnClickListener(new OnClickListener() {
@@ -154,9 +153,12 @@ public class ChatAdapter extends ArrayAdapter<Message> implements FileDownloader
                 if (mListener != null) {
                     mListener.onFileRefused((FileMessage) message);
                 }
-                btnOk.setEnabled(false);
-                btnNo.setEnabled(false);
-                fileMessage.setDownloadable(false);
+
+                Editor editor = mFilesPreferences.edit();
+                editor.putBoolean(fileMessage.getUuid(), true);
+                editor.apply();
+
+                layout.setVisibility(View.GONE);
             }
         });
 

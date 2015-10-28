@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -68,6 +69,7 @@ public class ChatActivity extends Activity implements ChatListener, FileSentList
     public static final int GOOGLE_PLAY_SERVICES_CODE = 102;
     public static final int PHOTO_AUDIO_CODE = 103;
 
+    private static final String FILES_PREFERENCES = "files_preferences";
     private static final String TAG = "Chat";
     private static final String[] SCOPES = { DriveScopes.DRIVE_FILE };
 
@@ -98,6 +100,7 @@ public class ChatActivity extends Activity implements ChatListener, FileSentList
 
     private ParticipantsListener mParticipantsListener = new ParticipantsListener();
     private MessagesListener mMessagesListener = new MessagesListener();
+    private SharedPreferences mFilesPreferences;
 
 
     // Service connection necessary for service binding.
@@ -145,6 +148,7 @@ public class ChatActivity extends Activity implements ChatListener, FileSentList
         mTokens = new ConcurrentHashMap<>();
         mDriveTasks = new ArrayList<>();
         mContacts = ContactsCache.getInstance(this);
+        mFilesPreferences = getPreferences(MODE_PRIVATE);
 
         mCredential = GoogleAccountCredential.usingOAuth2(
                 getApplicationContext(), Arrays.asList(SCOPES))
@@ -172,7 +176,7 @@ public class ChatActivity extends Activity implements ChatListener, FileSentList
 
         mMessageList = new ArrayList<>();
 
-        mChatAdapter = new ChatAdapter(this, mMessageList, mContacts);
+        mChatAdapter = new ChatAdapter(this, mMessageList, mFilesPreferences);
         mChatAdapter.setListener(this);
         mListChat = (ListView) findViewById(R.id.list_chat);
         mListChat.setAdapter(mChatAdapter);
@@ -567,9 +571,6 @@ public class ChatActivity extends Activity implements ChatListener, FileSentList
                         m = new Message(message);
                     } else {
                         m = new FileMessage(message);
-                        if (!m.getUsername().equals(FirebaseModel.getUser(ChatActivity.this))) {
-                            ((FileMessage) m).setDownloadable(true);
-                        }
                     }
 
                     Log.i(TAG, "Message: " + m.getMessage());
