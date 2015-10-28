@@ -13,6 +13,7 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.database.Cursor;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.IBinder;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Email;
@@ -61,6 +62,7 @@ public class ChatService extends Service {
     private ContactsCache mContactsCache;
     private ArrayBlockingQueue<Intent> mCommandQueue;
     private WorkingThread mWorkingThread;
+    private Handler mHandler;
 
     private List<ChatListener> mListeners;
 
@@ -78,6 +80,7 @@ public class ChatService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        mHandler = new Handler();
         mListeners = new ArrayList<>();
         mCommandQueue = new ArrayBlockingQueue<>(10);
         mWorkingThread = new WorkingThread();
@@ -164,14 +167,8 @@ public class ChatService extends Service {
                             Email.ADDRESS + " NOT NULL AND " +
                             ContactsContract.Contacts.DISPLAY_NAME + " <> '' AND " +
                             ContactsContract.Contacts.DISPLAY_NAME + " NOT NULL";
-            CursorLoader cursorLoader = new CursorLoader(this, Email.CONTENT_URI, projection, selection, null, null);
-            cursorLoader.registerListener(LOADER_INITIALIZE_ID, new OnLoadCompleteListener<Cursor>() {
-                @Override
-                public void onLoadComplete(Loader<Cursor> loader, Cursor data) {
-                    updateContacts(data);
-                }
-            });
-            cursorLoader.startLoading();
+            Cursor cursor = getContentResolver().query(Email.CONTENT_URI, projection, selection, null, null);
+            updateContacts(cursor);
         }
     }
 
